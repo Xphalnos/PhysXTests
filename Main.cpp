@@ -4,7 +4,8 @@
 
 using namespace physx;
 
-constexpr int TOTAL_CUBES = 50;
+constexpr int TOTAL_CUBES = 25;
+constexpr int TOTAL_SPHERES = 25;
 
 PxDefaultAllocator      gAllocator;
 PxDefaultErrorCallback  gErrorCallback;
@@ -47,6 +48,16 @@ PxRigidDynamic* CreateDynamicCube(const PxVec3& pos, const Vector3& size, const 
     return body;
 }
 
+PxRigidDynamic* CreateDynamicSphere(const PxVec3& pos, const PxReal& size, const PxReal& mass) {
+    PxTransform transform(pos);
+    PxSphereGeometry geometry(size);
+
+    PxRigidDynamic* body = PxCreateDynamic(*gPhysics, transform, geometry, *gMaterial, mass);
+    gScene->addActor(*body);
+
+    return body;
+}
+
 int main(void) {
     SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 600, "PhysX Test");
@@ -67,13 +78,23 @@ int main(void) {
     const PxRigidStatic* cube_static = CreateStaticCube({ 0.0F, 0.0F, 0.0F }, (cube_static_size * 0.5F));
 
     // Dynamic Cubes
-    constexpr Vector3 cube_dynamic_size = { 1.0F, 1.0F, 1.0F };
+    constexpr Vector3 cube_dynamic_size = { 0.5F, 0.5F, 0.5F };
     Model cube_dynamic_model[TOTAL_CUBES];
     PxRigidDynamic* cube_dynamic[TOTAL_CUBES];
 
     for (int i = 0; i < TOTAL_CUBES; i++) {
         cube_dynamic_model[i] = LoadModelFromMesh(GenMeshCube(cube_dynamic_size.x, cube_dynamic_size.y, cube_dynamic_size.z));
         cube_dynamic[i] = CreateDynamicCube({ (float)GetRandomValue(-5, 5), (5.0F + (i * 2.0F)), (float)GetRandomValue(-5, 5) }, (cube_dynamic_size * 0.5F), 100.0F);
+    }
+
+    // Dynamic Spheres
+    constexpr float sphere_dynamic_size = 0.5F;
+    Model sphere_dynamic_model[TOTAL_SPHERES];
+    PxRigidDynamic* sphere_dynamic[TOTAL_SPHERES];
+
+    for (int i = 0; i < TOTAL_SPHERES; i++) {
+        sphere_dynamic_model[i] = LoadModelFromMesh(GenMeshSphere(sphere_dynamic_size, 32, 32));
+        sphere_dynamic[i] = CreateDynamicSphere({ (float)GetRandomValue(-5, 5), (5.0F + (i * 2.0F)), (float)GetRandomValue(-5, 5) }, sphere_dynamic_size, 100.0F);
     }
 
     while (!WindowShouldClose()) {
@@ -85,7 +106,7 @@ int main(void) {
         UpdateCamera(&camera, CAMERA_ORBITAL);
         BeginMode3D(camera);
 
-        // Static cube (red)
+        // Static cube (blue)
         const PxTransform tStatic = cube_static->getGlobalPose();
         const Vector3 staticPos = { tStatic.p.x, tStatic.p.y, tStatic.p.z };
         PxVec3 staticAxisVec; float staticAngle;
@@ -94,7 +115,7 @@ int main(void) {
         const Vector3 staticAxis = { staticAxisVec.x, staticAxisVec.y, staticAxisVec.z };
         DrawModelEx(cube_static_model, staticPos, staticAxis, staticAngle, { 1.0F, 1.0F, 1.0F }, BLUE);
 
-        // Dynamic cubes (blue)
+        // Dynamic cubes (red)
         for (int i = 0; i < TOTAL_CUBES; i++) {
             const PxTransform tDynamic = cube_dynamic[i]->getGlobalPose();
             const Vector3 dynamicPos = { tDynamic.p.x, tDynamic.p.y, tDynamic.p.z };
@@ -103,6 +124,17 @@ int main(void) {
             dynamicAngle *= RAD2DEG;
             const Vector3 dynamicAxis = { dynamicAxisVec.x, dynamicAxisVec.y, dynamicAxisVec.z };
             DrawModelEx(cube_dynamic_model[i], dynamicPos, dynamicAxis, dynamicAngle, { 1.0F, 1.0F, 1.0F }, RED);
+        }
+
+        // Dynamic spheres (green)
+        for (int i = 0; i < TOTAL_SPHERES; i++) {
+            const PxTransform tDynamic = sphere_dynamic[i]->getGlobalPose();
+            const Vector3 dynamicPos = { tDynamic.p.x, tDynamic.p.y, tDynamic.p.z };
+            PxVec3 dynamicAxisVec; float dynamicAngle;
+            tDynamic.q.toRadiansAndUnitAxis(dynamicAngle, dynamicAxisVec);
+            dynamicAngle *= RAD2DEG;
+            const Vector3 dynamicAxis = { dynamicAxisVec.x, dynamicAxisVec.y, dynamicAxisVec.z };
+            DrawModelEx(sphere_dynamic_model[i], dynamicPos, dynamicAxis, dynamicAngle, { 1.0F, 1.0F, 1.0F }, GREEN);
         }
 
         EndMode3D();
