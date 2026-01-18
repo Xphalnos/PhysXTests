@@ -19,7 +19,7 @@ void InitPhysX() {
     PxSceneDesc sceneDesc(gPhysics->getTolerancesScale());
     sceneDesc.gravity = PxVec3(0.0F, -9.81F, 0.0F);
 
-    sceneDesc.cpuDispatcher = PxDefaultCpuDispatcherCreate(3); // Cores for Physics
+    sceneDesc.cpuDispatcher = PxDefaultCpuDispatcherCreate(2); // Cores for Physics
     sceneDesc.filterShader = PxDefaultSimulationFilterShader;
 
     gScene = gPhysics->createScene(sceneDesc);
@@ -48,7 +48,7 @@ PxRigidDynamic* CreateDynamicCube(const PxVec3& pos, const Vector3& size, const 
 }
 
 int main(void) {
-    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT | FLAG_WINDOW_RESIZABLE);
+    SetConfigFlags(FLAG_MSAA_4X_HINT | FLAG_WINDOW_HIGHDPI | FLAG_WINDOW_RESIZABLE);
     InitWindow(800, 600, "PhysX Test");
 
     Camera3D camera = {
@@ -92,9 +92,9 @@ int main(void) {
         tStatic.q.toRadiansAndUnitAxis(staticAngle, staticAxisVec);
         staticAngle *= RAD2DEG;
         const Vector3 staticAxis = { staticAxisVec.x, staticAxisVec.y, staticAxisVec.z };
-        DrawModelEx(cube_static_model, staticPos, staticAxis, staticAngle, { 1.0f, 1.0f, 1.0f }, BLUE);
+        DrawModelEx(cube_static_model, staticPos, staticAxis, staticAngle, { 1.0F, 1.0F, 1.0F }, BLUE);
 
-        // Dynamic cube (blue)
+        // Dynamic cubes (blue)
         for (int i = 0; i < TOTAL_CUBES; i++) {
             const PxTransform tDynamic = cube_dynamic[i]->getGlobalPose();
             const Vector3 dynamicPos = { tDynamic.p.x, tDynamic.p.y, tDynamic.p.z };
@@ -102,10 +102,13 @@ int main(void) {
             tDynamic.q.toRadiansAndUnitAxis(dynamicAngle, dynamicAxisVec);
             dynamicAngle *= RAD2DEG;
             const Vector3 dynamicAxis = { dynamicAxisVec.x, dynamicAxisVec.y, dynamicAxisVec.z };
-            DrawModelEx(cube_dynamic_model[i], dynamicPos, dynamicAxis, dynamicAngle, { 1.0f, 1.0f, 1.0f }, RED);
+            DrawModelEx(cube_dynamic_model[i], dynamicPos, dynamicAxis, dynamicAngle, { 1.0F, 1.0F, 1.0F }, RED);
         }
 
         EndMode3D();
+
+        DrawFPS((GetRenderWidth() * 0.01F), (GetRenderHeight() * 0.01F));
+
         EndDrawing();
     }
 

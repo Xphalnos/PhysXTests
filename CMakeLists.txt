@@ -15,10 +15,9 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 add_compile_options(-Wno-inconsistent-missing-override) # Avoid PhysX warnings with clang-cl
 add_compile_options(-DPX_SIMD_DISABLED)                 # FIXME: clang-cl creates errors without that
 add_compile_options(-DPX_PHYSX_STATIC_LIB)              # For using static libs
-add_compile_options(-msse4.2)                           # Compensates for PX_SIMD_DISABLED
 
-# Use OpenGL 4.3 instead of 3.3
-set(GRAPHICS "GRAPHICS_API_OPENGL_43")
+add_compile_options(-msse4.2)
+add_compile_options(-flto=full)
 
 include_directories(PhysX/include)
 link_directories(PhysX/lib)
