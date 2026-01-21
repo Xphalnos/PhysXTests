@@ -4,8 +4,8 @@
 
 using namespace physx;
 
-constexpr int TOTAL_CUBES = 25;
-constexpr int TOTAL_SPHERES = 25;
+constexpr int TOTAL_CUBES = 30;
+constexpr int TOTAL_SPHERES = 30;
 
 PxDefaultAllocator      gAllocator;
 PxDefaultErrorCallback  gErrorCallback;
@@ -29,30 +29,27 @@ void InitPhysX() {
 }
 
 PxRigidStatic* CreateStaticCube(const PxVec3& pos, const Vector3& size) {
-    PxTransform transform(pos);
     PxBoxGeometry geometry(size.x, size.y, size.z);
 
-    PxRigidStatic* body = PxCreateStatic(*gPhysics, transform, geometry, *gMaterial);
+    PxRigidStatic* body = PxCreateStatic(*gPhysics, PxTransform(pos), geometry, *gMaterial);
     gScene->addActor(*body);
 
     return body;
 }
 
 PxRigidDynamic* CreateDynamicCube(const PxVec3& pos, const Vector3& size, const PxReal& mass) {
-    PxTransform transform(pos);
     PxBoxGeometry geometry(size.x, size.y, size.z);
 
-    PxRigidDynamic* body = PxCreateDynamic(*gPhysics, transform, geometry, *gMaterial, mass);
+    PxRigidDynamic* body = PxCreateDynamic(*gPhysics, PxTransform(pos), geometry, *gMaterial, mass);
     gScene->addActor(*body);
 
     return body;
 }
 
 PxRigidDynamic* CreateDynamicSphere(const PxVec3& pos, const PxReal& size, const PxReal& mass) {
-    PxTransform transform(pos);
     PxSphereGeometry geometry(size);
 
-    PxRigidDynamic* body = PxCreateDynamic(*gPhysics, transform, geometry, *gMaterial, mass);
+    PxRigidDynamic* body = PxCreateDynamic(*gPhysics, PxTransform(pos), geometry, *gMaterial, mass);
     gScene->addActor(*body);
 
     return body;
@@ -85,6 +82,7 @@ int main(void) {
     for (int i = 0; i < TOTAL_CUBES; i++) {
         cube_dynamic_model[i] = LoadModelFromMesh(GenMeshCube(cube_dynamic_size.x, cube_dynamic_size.y, cube_dynamic_size.z));
         cube_dynamic[i] = CreateDynamicCube({ (float)GetRandomValue(-5, 5), (5.0F + (i * 2.0F)), (float)GetRandomValue(-5, 5) }, (cube_dynamic_size * 0.5F), 100.0F);
+        cube_dynamic[i]->userData = reinterpret_cast<void*>(i);
     }
 
     // Dynamic Spheres
@@ -95,6 +93,7 @@ int main(void) {
     for (int i = 0; i < TOTAL_SPHERES; i++) {
         sphere_dynamic_model[i] = LoadModelFromMesh(GenMeshSphere(sphere_dynamic_size, 32, 32));
         sphere_dynamic[i] = CreateDynamicSphere({ (float)GetRandomValue(-5, 5), (5.0F + (i * 2.0F)), (float)GetRandomValue(-5, 5) }, sphere_dynamic_size, 100.0F);
+        sphere_dynamic[i]->userData = reinterpret_cast<void*>(i);
     }
 
     while (!WindowShouldClose()) {
@@ -107,34 +106,52 @@ int main(void) {
         BeginMode3D(camera);
 
         // Static cube (blue)
-        const PxTransform tStatic = cube_static->getGlobalPose();
-        const Vector3 staticPos = { tStatic.p.x, tStatic.p.y, tStatic.p.z };
-        PxVec3 staticAxisVec; float staticAngle;
-        tStatic.q.toRadiansAndUnitAxis(staticAngle, staticAxisVec);
-        staticAngle *= RAD2DEG;
-        const Vector3 staticAxis = { staticAxisVec.x, staticAxisVec.y, staticAxisVec.z };
-        DrawModelEx(cube_static_model, staticPos, staticAxis, staticAngle, { 1.0F, 1.0F, 1.0F }, BLUE);
+        {
+            const PxTransform transform = cube_static->getGlobalPose();
+
+            PxVec3 axisVec; float angle;
+            transform.q.toRadiansAndUnitAxis(angle, axisVec);
+            const Vector3 position = { transform.p.x, transform.p.y, transform.p.z };
+            const Vector3 axis = { axisVec.x, axisVec.y, axisVec.z };
+            DrawModelEx(cube_static_model, position, axis, (angle * RAD2DEG), { 1.0F, 1.0F, 1.0F }, BLUE);
+        }
 
         // Dynamic cubes (red)
         for (int i = 0; i < TOTAL_CUBES; i++) {
-            const PxTransform tDynamic = cube_dynamic[i]->getGlobalPose();
-            const Vector3 dynamicPos = { tDynamic.p.x, tDynamic.p.y, tDynamic.p.z };
-            PxVec3 dynamicAxisVec; float dynamicAngle;
-            tDynamic.q.toRadiansAndUnitAxis(dynamicAngle, dynamicAxisVec);
-            dynamicAngle *= RAD2DEG;
-            const Vector3 dynamicAxis = { dynamicAxisVec.x, dynamicAxisVec.y, dynamicAxisVec.z };
-            DrawModelEx(cube_dynamic_model[i], dynamicPos, dynamicAxis, dynamicAngle, { 1.0F, 1.0F, 1.0F }, RED);
+            const PxTransform transform = cube_dynamic[i]->getGlobalPose();
+
+            PxVec3 axisVec; float angle;
+            transform.q.toRadiansAndUnitAxis(angle, axisVec);
+            const Vector3 position = { transform.p.x, transform.p.y, transform.p.z };
+            const Vector3 axis = { axisVec.x, axisVec.y, axisVec.z };
+            DrawModelEx(cube_dynamic_model[i], position, axis, (angle * RAD2DEG), { 1.0F, 1.0F, 1.0F }, RED);
+
+            if (transform.p.y < -20.0F) {
+                cube_dynamic[i]->setGlobalPose({ (float)GetRandomValue(-5, 5), 10.0F, (float)GetRandomValue(-5, 5) });
+                cube_dynamic[i]->setLinearVelocity({ 0.0F, 0.0F, 0.0F });
+                cube_dynamic[i]->setAngularVelocity({ 0.0F, 0.0F, 0.0F });
+                cube_dynamic[i]->clearForce();
+                cube_dynamic[i]->clearTorque();
+            }
         }
 
         // Dynamic spheres (green)
         for (int i = 0; i < TOTAL_SPHERES; i++) {
-            const PxTransform tDynamic = sphere_dynamic[i]->getGlobalPose();
-            const Vector3 dynamicPos = { tDynamic.p.x, tDynamic.p.y, tDynamic.p.z };
-            PxVec3 dynamicAxisVec; float dynamicAngle;
-            tDynamic.q.toRadiansAndUnitAxis(dynamicAngle, dynamicAxisVec);
-            dynamicAngle *= RAD2DEG;
-            const Vector3 dynamicAxis = { dynamicAxisVec.x, dynamicAxisVec.y, dynamicAxisVec.z };
-            DrawModelEx(sphere_dynamic_model[i], dynamicPos, dynamicAxis, dynamicAngle, { 1.0F, 1.0F, 1.0F }, GREEN);
+            const PxTransform transform = sphere_dynamic[i]->getGlobalPose();
+
+            PxVec3 axisVec; float angle;
+            transform.q.toRadiansAndUnitAxis(angle, axisVec);
+            const Vector3 position = { transform.p.x, transform.p.y, transform.p.z };
+            const Vector3 axis = { axisVec.x, axisVec.y, axisVec.z };
+            DrawModelEx(sphere_dynamic_model[i], position, axis, (angle * RAD2DEG), { 1.0F, 1.0F, 1.0F }, GREEN);
+
+            if (transform.p.y < -20.0F) {
+                sphere_dynamic[i]->setGlobalPose({ (float)GetRandomValue(-5, 5), 10.0F, (float)GetRandomValue(-5, 5) });
+                sphere_dynamic[i]->setLinearVelocity({ 0.0F, 0.0F, 0.0F });
+                sphere_dynamic[i]->setAngularVelocity({ 0.0F, 0.0F, 0.0F });
+                sphere_dynamic[i]->clearForce();
+                sphere_dynamic[i]->clearTorque();
+            }
         }
 
         EndMode3D();

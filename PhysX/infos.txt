@@ -1,8 +1,8 @@
 PhysX: 5.6.1-09ff24f
-Build Date: 17/01/2026
+Build Date: 31/01/2026
 
 Windows:
-Compiler: MSVC 2026 Ver. 14.50.35722
+Compiler: MSVC 2026 Ver. 14.50.35723
 Windows SDK: 10.0.28000.1
 
 Linux:
