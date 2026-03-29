@@ -2,6 +2,8 @@
 #include <raymath.h>
 #include <PxPhysicsAPI.h>
 
+#include <cmath>
+
 using namespace physx;
 
 constexpr int TOTAL_CUBES = 30;
@@ -13,12 +15,12 @@ PxPhysics*              gPhysics    = nullptr;
 PxScene*                gScene      = nullptr;
 PxMaterial*             gMaterial   = nullptr;
 
-void InitPhysX() {
+void InitPhysX(void) {
     PxFoundation* gFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, gAllocator, gErrorCallback);
     gPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *gFoundation, PxTolerancesScale());
 
     PxSceneDesc sceneDesc(gPhysics->getTolerancesScale());
-    sceneDesc.gravity = PxVec3(0.0F, -9.81F, 0.0F);
+    sceneDesc.gravity = {0.0F, -9.81F, 0.0F};
 
     sceneDesc.cpuDispatcher = PxDefaultCpuDispatcherCreate(2); // Cores for Physics
     sceneDesc.filterShader = PxDefaultSimulationFilterShader;
@@ -60,7 +62,7 @@ int main(void) {
     InitWindow(800, 600, "PhysX Test");
 
     Camera3D camera = {
-        .position   = { 10.0F, 10.0F, 10.0F },
+        .position   = { 15.0F, 10.0F, 10.0F },
         .target     = { 0.0F, 0.0F, 0.0F },
         .up         = { 0.0F, 1.0F, 0.0F },
         .fovy       = 50.0F,
@@ -69,10 +71,15 @@ int main(void) {
 
     InitPhysX();
 
-    // Static Cube
-    constexpr Vector3 cube_static_size = { 10.0F, 0.5F, 10.0F };
-    const Model cube_static_model = LoadModelFromMesh(GenMeshCube(cube_static_size.x, cube_static_size.y, cube_static_size.z));
-    const PxRigidStatic* cube_static = CreateStaticCube({ 0.0F, 0.0F, 0.0F }, (cube_static_size * 0.5F));
+    // Platform
+    constexpr Vector3 platform_size = { 10.0F, 0.5F, 10.0F };
+    const Model platform_model = LoadModelFromMesh(GenMeshCube(platform_size.x, platform_size.y, platform_size.z));
+    PxRigidStatic* platform = CreateStaticCube({ 0.0F, 0.0F, 0.0F }, (platform_size * 0.5F));
+
+    // Pusher
+    constexpr Vector3 pusher_size = { 10.0F, 2.0F, 0.5F };
+    const Model pusher_model = LoadModelFromMesh(GenMeshCube(pusher_size.x, pusher_size.y, pusher_size.z));
+    PxRigidStatic* pusher = CreateStaticCube({ 0.0F, 0.0F, 0.0F }, (pusher_size * 0.5F));
 
     // Dynamic Cubes
     constexpr Vector3 cube_dynamic_size = { 0.5F, 0.5F, 0.5F };
@@ -104,16 +111,43 @@ int main(void) {
         ClearBackground(DARKGRAY);
         UpdateCamera(&camera, CAMERA_ORBITAL);
         BeginMode3D(camera);
+        DrawGrid(50, 1.0F);
 
-        // Static cube (blue)
+        constexpr float bias  = 5.0F;
+        static float dyn_bias = 5.0F;
+        static float accel    = 0.0F;
+
+        if (accel <= -bias + 1.0F) dyn_bias = bias;
+        if (accel >= bias  - 1.0F) dyn_bias = -bias;
+
+        accel = std::lerp(accel, dyn_bias, GetFrameTime() * 1.5F);
+
+        // Platform (blue)
         {
-            const PxTransform transform = cube_static->getGlobalPose();
+            PxVec3 platform_pos(0, accel, 0);
+            platform->setGlobalPose(PxTransform(platform_pos));
+            const PxTransform transform = platform->getGlobalPose();
 
             PxVec3 axisVec; float angle;
             transform.q.toRadiansAndUnitAxis(angle, axisVec);
             const Vector3 position = { transform.p.x, transform.p.y, transform.p.z };
             const Vector3 axis = { axisVec.x, axisVec.y, axisVec.z };
-            DrawModelEx(cube_static_model, position, axis, (angle * RAD2DEG), { 1.0F, 1.0F, 1.0F }, BLUE);
+            DrawModelEx(platform_model, position, axis, (angle * RAD2DEG), { 1.0F, 1.0F, 1.0F }, BLUE);
+        }
+
+        // Pusher (purple)
+        {
+            static float i = 0.0F;
+            PxVec3 pusher_pos(0, accel + 1.0F, 0);
+            PxQuat rotation(PxPi * (i += GetFrameTime()), {0.0F, 1.0F, 0.0F});
+            pusher->setGlobalPose(PxTransform(pusher_pos, rotation));
+            const PxTransform transform = pusher->getGlobalPose();
+
+            PxVec3 axisVec; float angle;
+            transform.q.toRadiansAndUnitAxis(angle, axisVec);
+            const Vector3 position = { transform.p.x, transform.p.y, transform.p.z };
+            const Vector3 axis = { axisVec.x, axisVec.y, axisVec.z };
+            DrawModelEx(pusher_model, position, axis, (angle * RAD2DEG), { 1.0F, 1.0F, 1.0F }, PURPLE);
         }
 
         // Dynamic cubes (red)
