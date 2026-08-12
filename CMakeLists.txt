@@ -11,11 +11,6 @@ endif()
 
 project(PhysXTests)
 
-if (WIN32)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    add_compile_options(-DPX_SIMD_DISABLED) # FIXME: clang-cl creates errors without that
-endif()
-
 add_compile_options(-DPX_PHYSX_STATIC_LIB)
 add_compile_options(-Wno-inconsistent-missing-override)
 

@@ -4,6 +4,13 @@
 
 #include <cmath>
 
+#ifdef _WIN32
+extern "C" {
+    __declspec(dllexport) extern const unsigned long NvOptimusEnablement = 0x00000001;
+    __declspec(dllexport) extern const int AmdPowerXpressRequestHighPerformance = 1;
+}
+#endif
+
 using namespace physx;
 
 constexpr int TOTAL_CUBES = 30;
