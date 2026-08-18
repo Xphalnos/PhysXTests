@@ -4,6 +4,9 @@
 
 #include <cmath>
 
+#define TOTAL_CUBES   (30)
+#define TOTAL_SPHERES (30)
+
 #ifdef _WIN32
 extern "C" {
     __declspec(dllexport) extern const unsigned long NvOptimusEnablement = 0x00000001;
@@ -13,11 +16,8 @@ extern "C" {
 
 using namespace physx;
 
-constexpr int TOTAL_CUBES = 30;
-constexpr int TOTAL_SPHERES = 30;
-
-PxDefaultAllocator      gAllocator;
-PxDefaultErrorCallback  gErrorCallback;
+PxDefaultAllocator      gAllocator{};
+PxDefaultErrorCallback  gErrorCallback{};
 PxPhysics*              gPhysics    = nullptr;
 PxScene*                gScene      = nullptr;
 PxMaterial*             gMaterial   = nullptr;
@@ -26,8 +26,8 @@ void InitPhysX(void) {
     PxFoundation* gFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, gAllocator, gErrorCallback);
     gPhysics = PxCreatePhysics(PX_PHYSICS_VERSION, *gFoundation, PxTolerancesScale());
 
-    PxSceneDesc sceneDesc(gPhysics->getTolerancesScale());
-    sceneDesc.gravity = {0.0F, -9.81F, 0.0F};
+    PxSceneDesc sceneDesc = gPhysics->getTolerancesScale();
+    sceneDesc.gravity = { 0.0F, -9.81F, 0.0F };
 
     sceneDesc.cpuDispatcher = PxDefaultCpuDispatcherCreate(2); // Cores for Physics
     sceneDesc.filterShader = PxDefaultSimulationFilterShader;
@@ -81,19 +81,19 @@ int main(void) {
     // Platform
     constexpr Vector3 platform_size = { 10.0F, 0.5F, 10.0F };
     const Model platform_model = LoadModelFromMesh(GenMeshCube(platform_size.x, platform_size.y, platform_size.z));
-    PxRigidStatic* platform = CreateStaticCube({ 0.0F, 0.0F, 0.0F }, (platform_size * 0.5F));
+    PxRigidStatic* platform = CreateStaticCube({ 0.0F, 0.0F, 0.0F }, platform_size / 2);
 
     // Pusher
     constexpr Vector3 pusher_size = { 10.0F, 2.0F, 0.5F };
     const Model pusher_model = LoadModelFromMesh(GenMeshCube(pusher_size.x, pusher_size.y, pusher_size.z));
-    PxRigidStatic* pusher = CreateStaticCube({ 0.0F, 0.0F, 0.0F }, (pusher_size * 0.5F));
+    PxRigidStatic* pusher = CreateStaticCube({ 0.0F, 0.0F, 0.0F }, pusher_size / 2);
 
     // Dynamic Cubes
     constexpr Vector3 cube_dynamic_size = { 0.5F, 0.5F, 0.5F };
     Model cube_dynamic_model[TOTAL_CUBES];
     PxRigidDynamic* cube_dynamic[TOTAL_CUBES];
 
-    for (int i = 0; i < TOTAL_CUBES; i++) {
+    for (size_t i = 0; i < TOTAL_CUBES; i++) {
         cube_dynamic_model[i] = LoadModelFromMesh(GenMeshCube(cube_dynamic_size.x, cube_dynamic_size.y, cube_dynamic_size.z));
         cube_dynamic[i] = CreateDynamicCube({ (float)GetRandomValue(-5, 5), (5.0F + (i * 2.0F)), (float)GetRandomValue(-5, 5) }, (cube_dynamic_size * 0.5F), 100.0F);
         cube_dynamic[i]->userData = reinterpret_cast<void*>(i);
@@ -104,7 +104,7 @@ int main(void) {
     Model sphere_dynamic_model[TOTAL_SPHERES];
     PxRigidDynamic* sphere_dynamic[TOTAL_SPHERES];
 
-    for (int i = 0; i < TOTAL_SPHERES; i++) {
+    for (size_t i = 0; i < TOTAL_SPHERES; i++) {
         sphere_dynamic_model[i] = LoadModelFromMesh(GenMeshSphere(sphere_dynamic_size, 32, 32));
         sphere_dynamic[i] = CreateDynamicSphere({ (float)GetRandomValue(-5, 5), (5.0F + (i * 2.0F)), (float)GetRandomValue(-5, 5) }, sphere_dynamic_size, 100.0F);
         sphere_dynamic[i]->userData = reinterpret_cast<void*>(i);

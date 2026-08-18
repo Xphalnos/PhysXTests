@@ -1,0 +1,7 @@
+# Fix includes with clangd
+
+-I.
+-Iraylib/src
+-IPhysX/include
+
+-std=gnu++26
